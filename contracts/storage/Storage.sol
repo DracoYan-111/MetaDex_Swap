@@ -15,7 +15,7 @@ contract Storage {
     mapping(address => uint256) public treasuryFeeAddress;
     address[] public treasuryAddress;
 
-    address public constant _ETH_ADDRESS_ = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address  public _ETH_ADDRESS_;
 
     uint256 public _precision;
     uint256 public treasuryFee;

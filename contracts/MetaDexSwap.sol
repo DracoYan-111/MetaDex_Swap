@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
@@ -13,9 +12,10 @@ import "./storage/Events.sol";
 import "./storage/Managers.sol";
 
 
-contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgradeable, Storage, Events, Managers {
+contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Managers {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
+    
 
     /*
     * @notice Initialization method 0xaFd190a14847a16B7Bbed3A655E42133d439c037
@@ -24,10 +24,10 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgra
     */
     function initialize(
     ) public initializer {
+        _ETH_ADDRESS_ = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         _precision = 100;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        __ReentrancyGuard_init_unchained();
-    }
+        }
 
     receive() external payable {}
 
@@ -52,7 +52,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgra
         address dodoApprove,
         address dodoProxy,
         bytes memory dodoApiData
-    ) external payable nonReentrant {
+    ) external payable {
         require(fromToken != address(0) && toToken != address(0), "MS:f1");
         uint256 newFromAmount_ = _getHandlingFee(fromAmount, projectId, fromToken);
         require(newFromAmount == newFromAmount_, "MS:f2");
@@ -64,7 +64,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgra
             require(fromAmount == msg.value);
         }
 
-        (bool success,) = dodoProxy.call{value : fromToken == _ETH_ADDRESS_ ? fromAmount : 0}(dodoApiData);
+        (bool success,) = dodoProxy.call{value : fromToken == _ETH_ADDRESS_ ? newFromAmount : 0}(dodoApiData);
         require(success, "MS:f3");
 
         uint256 returnAmount = _generalBalanceOf(toToken, address(this));
@@ -153,6 +153,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgra
 
         return newFromAmount_;
     }
+
     //==========================================================
 
     /*
@@ -210,7 +211,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgra
     * @param amount Withdrawal amount
     */
     function withdrawMoney(
-        address tokenAddress,
+        address token,
         address to,
         uint256 amount
     ) external onlyRole(FINANCIAL_ADMINISTRATOR) {
