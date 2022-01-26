@@ -6,10 +6,18 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Storage {
 
-  mapping(uint256 => uint256) public projectFee;
-  mapping(uint256 => uint256) public treasuryFee;
+    mapping(string => uint256) public projectFee;
+    mapping(string => uint256) public projectTreasuryFee;
 
+    mapping(string => mapping(address => uint256)) public projectFeeAddress;
+    mapping(string => address[]) public projectAddress;
 
-  address constant _ETH_ADDRESS_;
+    mapping(address => uint256) public treasuryFeeAddress;
+    address[] public treasuryAddress;
+
+    address public constant _ETH_ADDRESS_ = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+    uint256 public _precision;
+    uint256 public treasuryFee;
 
 }
