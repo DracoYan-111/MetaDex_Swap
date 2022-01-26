@@ -114,8 +114,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgra
 
     /*
     * @dev Query the token balance in an address
-    * @parm token Query token address
-    * @parm who   The queried address
+    * @param token Query token address
+    * @param who   The queried address
     */
     function _generalBalanceOf(
         address token,
@@ -153,23 +153,73 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgra
 
         return newFromAmount_;
     }
+    //==========================================================
 
+    /*
+    * @notice Upload a new collaborative project ID
+    * @dev PROJECT_ADMINISTRATORS use
+    * @param projectId       New project id
+    * @param project         The percentage of fees charged by the project
+    * @param projectTreasury The proportion of the fee charged by the treasury for the project
+    */
+    function uploadProjectParty(
+        string calldata projectId,
+        uint256 project,
+        uint256 projectTreasury
+    ) external onlyRole(PROJECT_ADMINISTRATORS) {
+        projectFee[projectId] = project;
+        projectTreasuryFee[projectId] = projectTreasury;
+    }
 
     //==========================================================
-    /**/
+    /*
+    * @notice Modify the fee ratio
+    * @dev PROJECT_ADMINISTRATORS use
+    * @param projectId                  The id of the project that has been cooperated with
+    * @param projectProportion          Proportion of fees charged by the project party
+    * @param projectTreasuryProportion  Proportion of the fee charged by the treasury to the project party
+    */
     function setProjectFee(
         string calldata projectId,
         uint256 projectProportion,
         uint256 projectTreasuryProportion
     ) external onlyRole(PROJECT_ADMINISTRATORS) {
         projectFee[projectId] = projectProportion;
+        emit setProjectFeeRatio(block.timestamp, projectId, projectProportion);
         projectTreasuryFee[projectId] = projectTreasuryProportion;
-
+        emit setProjectTreasuryFeeRatio(block.timestamp, projectId, projectTreasuryProportion);
     }
 
-    /**/
+    /*
+    * @notice Revised treasury fee
+    * @dev PROJECT_ADMINISTRATORS use
+    * @param proportion The percentage of the fee that the treasury must charge
+    */
     function setTreasuryFee(
         uint256 proportion
     ) external onlyRole(PROJECT_ADMINISTRATORS) {
+        treasuryFee = proportion;
+        emit setTreasuryFeeRatio(block.timestamp, proportion);
+    }
+
+    /*
+    * @notice Treasurer takes tokens
+    * @dev FINANCIAL_ADMINISTRATOR use
+    * @param token  Send token address
+    * @param to     Payment address
+    * @param amount Withdrawal amount
+    */
+    function withdrawMoney(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external onlyRole(FINANCIAL_ADMINISTRATOR) {
+        if (amount > 0) {
+            if (token == _ETH_ADDRESS_) {
+                payable(to).transfer(amount);
+            } else {
+                IERC20(token).safeTransfer(to, amount);
+            }
+        }
     }
 }
