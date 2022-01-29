@@ -13,11 +13,15 @@ contract Storage {
     mapping(string => address[]) public projectAddress;
 
     mapping(address => uint256) public treasuryFeeAddress;
+    mapping(string => address) public projectManager;
+
     address[] public treasuryAddress;
 
     address  public _ETH_ADDRESS_;
 
+
     uint256 public _precision;
     uint256 public treasuryFee;
+
 
 }

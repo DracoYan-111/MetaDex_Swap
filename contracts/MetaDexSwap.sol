@@ -15,7 +15,7 @@ import "./storage/Managers.sol";
 contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Managers {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
-    
+
 
     /*
     * @notice Initialization method 0xaFd190a14847a16B7Bbed3A655E42133d439c037
@@ -27,7 +27,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         _ETH_ADDRESS_ = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         _precision = 100;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        }
+    }
 
     receive() external payable {}
 
@@ -154,6 +154,45 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         return newFromAmount_;
     }
 
+    /*
+    * @notice Project method to receive tokens
+    * @dev Support individual collection and batch collection,Project administrators use
+    * @param state     Pick up individually or in bulk
+    * @param token     Token address received separately
+    * @param to        Payment address
+    * @param projectId The id of the project that has been cooperated with
+    */
+    function claimTokens(
+        bool state,
+        address token,
+        address to,
+        string projectId
+    ) external projectManager(projectId) {
+        if (state) {
+            for (uint256 i = 0; i < projectAddress[projectId].length; i++) {
+                address tokenAddress = projectAddress[projectId][i];
+                IERC20(tokenAddress).safeTransfer(to, projectFeeAddress[projectId][tokenAddress]);
+            }
+        } else {
+            IERC20(token).safeTransfer(to, projectFeeAddress[projectId][token]);
+        }
+    }
+
+    /*
+    * @notice The project party transfers financial administrator privileges
+    * @dev Project administrators use,Support for giving up management rights (transfer to 0 address)
+    * @param projectId         The id of the project that has been cooperated with
+    * @param newProjectManager New administrator address
+    */
+    function transferManagement(
+        string projectId,
+        address newProjectManager
+    ) external projectManager(projectId) {
+        address oldProjectManager = projectManager[projectId];
+        projectManager[projectId] = newProjectManager;
+        setNewProjectManager(block.timestamp, oldProjectManager, newProjectManager, projectId);
+    }
+
     //==========================================================
 
     /*
@@ -182,6 +221,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     */
     function setProjectFee(
         string calldata projectId,
+        address newProjectManager,
         uint256 projectProportion,
         uint256 projectTreasuryProportion
     ) external onlyRole(PROJECT_ADMINISTRATORS) {
@@ -189,6 +229,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         emit setProjectFeeRatio(block.timestamp, projectId, projectProportion);
         projectTreasuryFee[projectId] = projectTreasuryProportion;
         emit setProjectTreasuryFeeRatio(block.timestamp, projectId, projectTreasuryProportion);
+        projectManager[projectId] = newProjectManager;
+        setNewProjectManager(block.timestamp, address(0), newProjectManager, projectId);
     }
 
     /*
@@ -222,5 +264,12 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
                 IERC20(token).safeTransfer(to, amount);
             }
         }
+    }
+
+    //==========================================================
+    //Are you a project administrator
+    modifier projectManager(string calldata projectId){
+        require(_msgSender() == projectManager[projectId], "MS:f4");
+        _;
     }
 }

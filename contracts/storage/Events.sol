@@ -21,4 +21,11 @@ contract Events {
     */
     event setTreasuryFeeRatio(uint256 blockTimestamp, uint256 proportion);
 
+    /*
+    Set up the project's financial administrator
+
+    */
+    event setNewProjectManager(uint256 blockTimestamp, address oldProjectManager, address newProjectManager, string projectID);
+
+
 }
