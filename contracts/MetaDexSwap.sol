@@ -266,10 +266,35 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         }
     }
 
+    /*
+    * @notice Pause all projects or specified projects
+    * @dev PROJECT_ADMINISTRATORS use
+    * @param state  All project status
+    * @param projectId     Item number to pause
+    * @param projectState_ Project status to pause
+    */
+    function projectState(
+        bool state,
+        string calldata projectId,
+        bool projectState_
+    ) external onlyRole(PROJECT_ADMINISTRATORS) {
+        globalState = state;
+        _projectState[projectId] = projectState_;
+    }
     //==========================================================
     //Are you a project administrator
     modifier projectManager(string calldata projectId){
         require(_msgSender() == projectManager[projectId], "MS:f4");
         _;
+    }
+
+    //Determine whether the specified item or all items are suspended
+    modifier projectSuspended(string calldata projectId){
+        if (globalState && _projectState[projectId]) {
+            _;
+        } else {
+            require(false, "MS:f5");
+        }
+
     }
 }
