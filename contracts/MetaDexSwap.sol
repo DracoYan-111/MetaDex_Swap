@@ -166,7 +166,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         bool state,
         address token,
         address to,
-        string projectId
+        string calldata projectId
     ) external projectManager(projectId) {
         if (state) {
             for (uint256 i = 0; i < projectAddress[projectId].length; i++) {
@@ -185,12 +185,12 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     * @param newProjectManager New administrator address
     */
     function transferManagement(
-        string projectId,
+        string calldata projectId,
         address newProjectManager
     ) external projectManager(projectId) {
-        address oldProjectManager = projectManager[projectId];
-        projectManager[projectId] = newProjectManager;
-        setNewProjectManager(block.timestamp, oldProjectManager, newProjectManager, projectId);
+        address oldProjectManager = _projectManager[projectId];
+        _projectManager[projectId] = newProjectManager;
+        emit setNewProjectManager(block.timestamp, oldProjectManager, newProjectManager, projectId);
     }
 
     //==========================================================
@@ -229,8 +229,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         emit setProjectFeeRatio(block.timestamp, projectId, projectProportion);
         projectTreasuryFee[projectId] = projectTreasuryProportion;
         emit setProjectTreasuryFeeRatio(block.timestamp, projectId, projectTreasuryProportion);
-        projectManager[projectId] = newProjectManager;
-        setNewProjectManager(block.timestamp, address(0), newProjectManager, projectId);
+        _projectManager[projectId] = newProjectManager;
+        emit setNewProjectManager(block.timestamp, address(0), newProjectManager, projectId);
     }
 
     /*
@@ -284,7 +284,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     //==========================================================
     //Are you a project administrator
     modifier projectManager(string calldata projectId){
-        require(_msgSender() == projectManager[projectId], "MS:f4");
+        require(_msgSender() == _projectManager[projectId], "MS:f4");
         _;
     }
 

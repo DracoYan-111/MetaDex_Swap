@@ -13,7 +13,7 @@ contract Storage {
     mapping(string => address[]) public projectAddress;
 
     mapping(address => uint256) public treasuryFeeAddress;
-    mapping(string => address) public projectManager;
+    mapping(string => address) public _projectManager;
 
     mapping(string => bool) public _projectState;
 
