@@ -167,14 +167,14 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         address token,
         address to,
         string calldata projectId
-    ) external projectManager(projectId) {
+    ) external projectManager(projectId) projectSuspended(projectId) {
         if (state) {
             for (uint256 i = 0; i < projectAddress[projectId].length; i++) {
                 address tokenAddress = projectAddress[projectId][i];
-                IERC20(tokenAddress).safeTransfer(to, projectFeeAddress[projectId][tokenAddress]);
+                _generalTransfer(tokenAddress, to, projectFeeAddress[projectId][token]);
             }
         } else {
-            IERC20(token).safeTransfer(to, projectFeeAddress[projectId][token]);
+            _generalTransfer(tokenAddress, to, projectFeeAddress[projectId][token]);
         }
     }
 
@@ -257,13 +257,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         address to,
         uint256 amount
     ) external onlyRole(FINANCIAL_ADMINISTRATOR) {
-        if (amount > 0) {
-            if (token == _ETH_ADDRESS_) {
-                payable(to).transfer(amount);
-            } else {
-                IERC20(token).safeTransfer(to, amount);
-            }
-        }
+        _generalTransfer(token, to, amount);
     }
 
     /*
