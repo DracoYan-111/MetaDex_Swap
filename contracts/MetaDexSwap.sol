@@ -27,6 +27,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         _ETH_ADDRESS_ = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         _precision = 100;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        globalState = true;
     }
 
     receive() external payable {}
@@ -209,6 +210,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     ) external onlyRole(PROJECT_ADMINISTRATORS) {
         projectFee[projectId] = project;
         projectTreasuryFee[projectId] = projectTreasury;
+        _projectState[projectId] = true;
     }
 
     //==========================================================
