@@ -26,5 +26,6 @@ contract Storage {
     uint256 public _precision;
     uint256 public treasuryFee;
 
+    address public swapContract;
 
 }

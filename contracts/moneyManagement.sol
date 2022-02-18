@@ -12,7 +12,7 @@ import "./storage/Events.sol";
 import "./storage/Managers.sol";
 
 
-contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Managers {
+contract moneyManagement is AccessControlEnumerableUpgradeable, Storage, Events, Managers {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -33,7 +33,68 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     receive() external payable {}
 
     /*
-   * @dev Send the tokens exchanged by the user to the user
+    * @notice Users use DODO API to trade
+    * @dev Compatible with ETH=>ERC20, ERC20=>ETH
+    * @param fromToken     Contract address of a token to sell ETH(BNB or Matic) 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+    * @param toToken       Contract address of a token to buy ETH(BNB or Matic) 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+    * @param fromAmount    Amount of a token to sell NOTE：calculated with decimals，For example 1ETH = 10**18
+    * @param newFromAmount New amount of a token to sell NOTE：calculated with decimals，For example 1ETH = 10**18
+    * @param projectId     The id of the project that has been cooperated with
+    * @param dodoApprove   User need give sell Token's authority to this contract  before swaping. if sell Token equals to ETH (BNB or HT). the param will be empty.
+    * @param dodoProxy     DODOV2Proxy or DODORouteProxy's address
+    * @param dodoApiData   ABI Data,Use directly
+    */
+    function useDodoApiData(
+        address fromToken,
+        address toToken,
+        uint256 fromAmount,
+        uint256 newFromAmount,
+        string calldata projectId,
+        address dodoApprove,
+        address dodoProxy,
+        bytes memory dodoApiData
+    ) external payable {
+        require(fromToken != address(0) && toToken != address(0), "MS:f1");
+        uint256 newFromAmount_ = _getHandlingFee(fromAmount, projectId, fromToken);
+        require(newFromAmount == newFromAmount_, "MS:f2");
+
+        if (fromToken != _ETH_ADDRESS_) {
+            IERC20(fromToken).transferFrom(_msgSender(), address(this), fromAmount);
+            _generalApproveMax(fromToken, dodoApprove, newFromAmount_);
+        } else {
+            require(fromAmount == msg.value);
+        }
+
+        (bool success,) = dodoProxy.call{value : fromToken == _ETH_ADDRESS_ ? newFromAmount : 0}(dodoApiData);
+        require(success, "MS:f3");
+
+        uint256 returnAmount = _generalBalanceOf(toToken, address(this));
+
+        _generalTransfer(toToken, _msgSender(), returnAmount);
+    }
+
+    /*
+    * @dev Max Approve of user's sold tokens
+    * @param token  Approve token address
+    * @param to     Approve address
+    * @param amount Number of transactions
+    */
+    function _generalApproveMax(
+        address token,
+        address to,
+        uint256 amount
+    ) internal {
+        uint256 allowance = IERC20(token).allowance(address(this), to);
+        if (allowance < amount) {
+            if (allowance > 0) {
+                IERC20(token).safeApprove(to, 0);
+            }
+            IERC20(token).safeApprove(to, ~uint256(0));
+        }
+    }
+
+    /*
+    * @dev Send the tokens exchanged by the user to the user
     * @param token  Send token address
     * @param to     Payment address
     * @param amount Amount of tokens sent
@@ -53,18 +114,23 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     }
 
     /*
-    * @notice Set swap contract address
-    * @dev PROJECT_ADMINISTRATORS use
-    * @param _swapContract Swap contract address
+    * @dev Query the token balance in an address
+    * @param token Query token address
+    * @param who   The queried address
     */
-    function setSwapContract(
-        address _swapContract
-    ) external onlyRole(PROJECT_ADMINISTRATORS) {
-        swapContract = _swapContract;
+    function _generalBalanceOf(
+        address token,
+        address who
+    ) internal view returns (uint256) {
+        if (token == _ETH_ADDRESS_) {
+            return who.balance;
+        } else {
+            return IERC20(token).balanceOf(who);
+        }
     }
 
     /*
-    * @dev Calculate the fee ratio,swapContract use
+    * @dev Calculate the fee ratio
     * @param  fromAmount     Amount of a token to sell NOTE：calculated with decimals，For example 1ETH = 10**18
     * @param  projectId      The id of the project that has been cooperated with
     * @return newFromAmount_ From amount after handling fee
@@ -73,8 +139,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         uint256 fromAmount,
         string calldata projectId,
         address fromToken
-    ) public returns (uint256 newFromAmount_){
-        require(_msgSender() == swapContract, "MS:f4");
+    ) internal returns (uint256 newFromAmount_){
+
         (, uint256 treasuryBounty_) = (fromAmount.mul(treasuryFee)).tryDiv(_precision);
         (, uint256 projectBounty_) = ((fromAmount.sub(treasuryBounty_)).mul(projectFee[projectId])).tryDiv(_precision);
         (, uint256 projectTreasuryBounty_) = (projectBounty_.mul(projectTreasuryFee[projectId])).tryDiv(_precision);
@@ -179,17 +245,6 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     ) external onlyRole(PROJECT_ADMINISTRATORS) {
         treasuryFee = proportion;
         emit setTreasuryFeeRatio(block.timestamp, proportion);
-    }
-
-    /*
-    * @notice Revised precision
-    * @dev PROJECT_ADMINISTRATORS use
-    * @param proportion The percentage of the fee that the treasury must charge
-    */
-    function setPrecision(
-        uint256 proportion
-    ) external onlyRole(PROJECT_ADMINISTRATORS) {
-        _precision = proportion;
     }
 
     /*
