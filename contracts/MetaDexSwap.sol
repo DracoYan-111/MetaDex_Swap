@@ -107,9 +107,11 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
             for (uint256 i = 0; i < projectAddress[projectId].length; i++) {
                 address tokenAddress = projectAddress[projectId][i];
                 _generalTransfer(tokenAddress, to, projectFeeAddress[projectId][token]);
+                projectFeeAddress[projectId][token] = 0;
             }
         } else {
             _generalTransfer(token, to, projectFeeAddress[projectId][token]);
+            projectFeeAddress[projectId][token] = 0;
         }
     }
 
@@ -152,6 +154,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     * @notice Modify the fee ratio
     * @dev PROJECT_ADMINISTRATORS use
     * @param projectId                  The id of the project that has been cooperated with
+    * @param newProjectManager          New project administrator address
     * @param projectProportion          Proportion of fees charged by the project party
     * @param projectTreasuryProportion  Proportion of the fee charged by the treasury to the project party
     */
@@ -197,14 +200,13 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     * @dev FINANCIAL_ADMINISTRATOR use
     * @param token  Send token address
     * @param to     Payment address
-    * @param amount Withdrawal amount
     */
     function withdrawMoney(
         address token,
-        address to,
-        uint256 amount
+        address to
     ) external onlyRole(FINANCIAL_ADMINISTRATOR) {
-        _generalTransfer(token, to, amount);
+        _generalTransfer(token, to, treasuryFeeAddress[fromToken]);
+        treasuryFeeAddress[fromToken] = 0;
     }
 
     /*
