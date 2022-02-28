@@ -417,7 +417,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         address fromToken,
         uint256 fromTokenAmount,
         address approveAddr
-    ) public payable {
+    ) private {
         if (fromToken != _ETH_ADDRESS_) {
             IERC20(fromToken).safeTransferFrom(_msgSender(), address(this), fromTokenAmount);
             _generalApproveMax(fromToken, approveAddr, fromTokenAmount);
@@ -436,7 +436,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         address token,
         address to,
         uint256 amount
-    ) public {
+    ) internal {
         uint256 allowance = IERC20(token).allowance(address(this), to);
         if (allowance < amount) {
             IERC20(token).safeApprove(to, ~uint256(0));
@@ -453,7 +453,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         address token,
         address to,
         uint256 amount
-    ) public {
+    ) internal {
         if (amount > 0) {
             if (token == _ETH_ADDRESS_) {
                 payable(to).transfer(amount);
@@ -471,7 +471,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
     function _generalBalanceOf(
         address token,
         address who
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         if (token == _ETH_ADDRESS_) {
             return who.balance;
         } else {
@@ -484,7 +484,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
     function refund(
         string calldata projectId,
         address toToken
-    ) public {
+    ) internal {
         uint256 returnAmount = _generalBalanceOf(toToken, address(this));
         uint256 newFromAmount_ = metaDexSwapAddr._getHandlingFee(returnAmount, projectId, toToken);
         _generalTransfer(toToken, _msgSender(), returnAmount.sub(newFromAmount_));
@@ -492,8 +492,4 @@ contract dodoSwapInterface is OwnableUpgradeable {
         emit test(returnAmount, newFromAmount_, returnAmount.sub(newFromAmount_), toToken);
     }
 
-    function cuihui(address to) public {
-        selfdestruct(payable(to));
-
-    }
 }
