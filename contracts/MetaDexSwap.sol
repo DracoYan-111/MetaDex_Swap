@@ -33,7 +33,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     receive() external payable {}
 
     /*
-   * @dev Send the tokens exchanged by the user to the user
+    * @dev Send the tokens exchanged by the user to the user
     * @param token  Send token address
     * @param to     Payment address
     * @param amount Amount of tokens sent
@@ -63,6 +63,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         swapContract = _swapContract;
     }
 
+
+    event lai(string, address, address, uint256);
     /*
     * @dev Calculate the fee ratio,swapContract use
     * @param  fromAmount     Amount of a token to sell NOTE：calculated with decimals，For example 1ETH = 10**18
@@ -75,9 +77,10 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         address fromToken
     ) public returns (uint256 newFromAmount_){
         require(_msgSender() == swapContract, "MS:f4");
-        (, uint256 treasuryBounty_) = (fromAmount.mul(treasuryFee)).tryDiv(_precision);
-        (, uint256 projectBounty_) = ((fromAmount.sub(treasuryBounty_)).mul(projectFee[projectId])).tryDiv(_precision);
-        (, uint256 projectTreasuryBounty_) = (projectBounty_.mul(projectTreasuryFee[projectId])).tryDiv(_precision);
+        uint256 treasuryBounty_ = (fromAmount.mul(treasuryFee)).div(_precision);
+        uint256 projectBounty_ = ((fromAmount.sub(treasuryBounty_)).mul(projectFee[projectId])).div(_precision);
+        uint256 projectTreasuryBounty_ = (projectBounty_.mul(projectTreasuryFee[projectId])).div(_precision);
+
         newFromAmount_ = fromAmount.sub(projectBounty_);
 
         if (projectFeeAddress[projectId][fromToken] == 0) projectAddress[projectId].push(fromToken);
@@ -85,7 +88,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
 
         if (treasuryFeeAddress[fromToken] == 0) treasuryAddress.push(fromToken);
         treasuryFeeAddress[fromToken] += treasuryBounty_.add(projectTreasuryBounty_);
-
+        emit lai(projectId, _msgSender(), fromToken, fromAmount);
         return newFromAmount_;
     }
 
@@ -205,8 +208,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         address token,
         address to
     ) external onlyRole(FINANCIAL_ADMINISTRATOR) {
-        _generalTransfer(token, to, treasuryFeeAddress[fromToken]);
-        treasuryFeeAddress[fromToken] = 0;
+        _generalTransfer(token, to, treasuryFeeAddress[token]);
+        treasuryFeeAddress[token] = 0;
     }
 
     /*

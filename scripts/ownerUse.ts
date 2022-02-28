@@ -11,8 +11,8 @@ const hre = require('hardhat')
 import {BigNumber, ethers} from 'ethers'
 import {ArgumentParser} from 'argparse';
 
-const MerkleDistributorFactoryAbi = require('../artifacts/contracts/MerkleDistributorFactory.sol/MerkleDistributorFactory.json');
-const TestERC20 = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+const MetaDexSwapFactoryAbi = require('../artifacts/contracts/MetaDexSwap.sol/MetaDexSwap.json');
+const ProxyAdmin = require('../artifacts/contracts/utils/ContractPorxy.sol/ContractProxy.json');
 const contractAddr = require('../other/contractAddr.json');
 const global = require('../other/global.json');
 
@@ -36,31 +36,27 @@ async function main() {
      let privateKey = args.userPrk;
      console.log(privateKey);*/
 
-    let merkleDistributorFactory = wallets(contractAddr.MerkleDistributorFactory, MerkleDistributorFactoryAbi.abi);
+    let proxyAdmin = wallets(contractAddr.proxyAdmin, ProxyAdmin.abi);
+
+    let metaDexSwapProxy = wallets(contractAddr.MetaDexSwapProxy, MetaDexSwapFactoryAbi.abi);
+
     //==================== todo Set admin rights ====================
 
-    let financial = await merkleDistributorFactory.FINANCIAL_ADMINISTRATOR();
-    //console.log("financial bytes:" + financial);
+    const MetaDexSwap = await hre.ethers.getContractFactory("MetaDexSwap");
+    const metaDexSwap = await MetaDexSwap.deploy();
+    await metaDexSwap.deployed();
+    console.log("metaDexSwap deployed to:", metaDexSwap.address);
 
-    let grantRole_financial = await merkleDistributorFactory.grantRole(financial, global.loaclhost.user_address);
-    console.log("grantRole_financial hash:" + grantRole_financial.hash);
-    await grantRole_financial.wait();
-    console.log("grantRole_financial finish");
-
-    let project = await merkleDistributorFactory.PROJECT_ADMINISTRATORS();
-    //console.log("project bytes:" + project);
-
-    let grantRole_project = await merkleDistributorFactory.grantRole(project, global.loaclhost.user_address);
-    console.log("grantRole_project hash:" + grantRole_project.hash);
-    await grantRole_project.wait();
-    console.log("grantRole_project finish");
-
+    const upgrade = await proxyAdmin.upgrade(contractAddr.MetaDexSwapProxy, metaDexSwap.address);
+    console.log("Upgrade哈希:" + upgrade.hash);
+    await upgrade.wait();
+    console.log("Upgrade完成");
 }
 
 
 function wallets(addr, abi) {
-    let provider = ethers.getDefaultProvider(global.loaclhost.work);
-    let privateKey = global.loaclhost.private_key;
+    let provider = ethers.getDefaultProvider(contractAddr.testNetwork);
+    let privateKey = contractAddr.localUserKey;
     let contract = new ethers.Contract(addr, abi, provider);
     // 从私钥获取一个签名器 Signer
     let wallet = new ethers.Wallet(privateKey, provider);
