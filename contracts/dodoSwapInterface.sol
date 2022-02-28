@@ -127,7 +127,6 @@ contract dodoSwapInterface is OwnableUpgradeable {
     receive() external payable {}
 
 
-    event bbb(bytes);
     /**
     * @notice Binding external accounting contracts
     * @dev onlyOwner use
@@ -174,7 +173,6 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
         (bool success,) = addrList[1].call{value : addrList[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
         require(success, "API_SWAP_FAILED");
-        emit bbb(data);
         refund(projectId, addrList[3]);
     }
 
@@ -479,8 +477,6 @@ contract dodoSwapInterface is OwnableUpgradeable {
         }
     }
 
-    event test(uint256, uint256, uint256, address);
-
     function refund(
         string calldata projectId,
         address toToken
@@ -489,7 +485,6 @@ contract dodoSwapInterface is OwnableUpgradeable {
         uint256 newFromAmount_ = metaDexSwapAddr._getHandlingFee(returnAmount, projectId, toToken);
         _generalTransfer(toToken, _msgSender(), returnAmount.sub(newFromAmount_));
         _generalTransfer(toToken, _msgSender(), _generalBalanceOf(toToken, address(this)));
-        emit test(returnAmount, newFromAmount_, returnAmount.sub(newFromAmount_), toToken);
     }
 
 }
