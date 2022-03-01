@@ -43,12 +43,30 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         address to,
         uint256 amount
     ) internal {
+        _total[token] = _generalBalanceOf(token,address(this));
         if (amount > 0) {
             if (token == _ETH_ADDRESS_) {
                 payable(to).transfer(amount);
             } else {
                 IERC20(token).safeTransfer(to, amount);
             }
+            _total[token] -= amount;
+        }
+    }
+
+    /*
+    * @dev Query the token balance in an address
+    * @param token Query token address
+    * @param who   The queried address
+    */
+    function _generalBalanceOf(
+        address token,
+        address who
+    ) internal view returns (uint256) {
+        if (token == _ETH_ADDRESS_) {
+            return who.balance;
+        } else {
+            return IERC20(token).balanceOf(who);
         }
     }
 
@@ -64,7 +82,6 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     }
 
 
-    event lai(string, address, address, uint256);
     /*
     * @dev Calculate the fee ratio,swapContract use
     * @param  fromAmount     Amount of a token to sell NOTE：calculated with decimals，For example 1ETH = 10**18
@@ -77,20 +94,45 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         address fromToken
     ) public returns (uint256 newFromAmount_){
         require(_msgSender() == swapContract, "MS:f4");
+
+        _total[fromToken] = _generalBalanceOf(fromToken, address(this));
+
         uint256 treasuryBounty_ = (fromAmount.mul(treasuryFee)).div(_precision);
         uint256 projectBounty_ = ((fromAmount.sub(treasuryBounty_)).mul(projectFee[projectId])).div(_precision);
-        uint256 projectTreasuryBounty_ = (projectBounty_.mul(projectTreasuryFee[projectId])).div(_precision);
+        newFromAmount_ = fromAmount.sub(projectBounty_.add(treasuryBounty_));
 
-        newFromAmount_ = fromAmount.sub(projectBounty_);
-
-        if (projectFeeAddress[projectId][fromToken] == 0) projectAddress[projectId].push(fromToken);
-        projectFeeAddress[projectId][fromToken] += projectBounty_.sub(projectTreasuryBounty_);
-
-        if (treasuryFeeAddress[fromToken] == 0) treasuryAddress.push(fromToken);
-        treasuryFeeAddress[fromToken] += treasuryBounty_.add(projectTreasuryBounty_);
-        emit lai(projectId, _msgSender(), fromToken, fromAmount);
         return newFromAmount_;
     }
+
+    /*
+    * @dev Save user data
+    * @param  projectId      The id of the project that has been cooperated with
+    * @return newFromAmount_ From amount after handling fee
+    */
+    function _recordData(
+        string calldata projectId,
+        address fromToken
+    ) public {
+        require(_msgSender() == swapContract, "MS:f4");
+
+        uint256 oldTotal = _total[fromToken];
+        uint256 newTotal = _generalBalanceOf(fromToken, address(this));
+        uint256 fromAmount = newTotal.sub(oldTotal);
+
+        uint256 treasuryBounty_ = (fromAmount.mul(treasuryFee)).div(_precision);
+
+        uint256 treasury = fromAmount.sub(treasuryBounty_);
+
+        uint256 treasuryBountyTwo = (treasury.mul(projectTreasuryFee[projectId])).div(_precision);
+
+        if (projectFeeAddress[projectId][fromToken] == 0) projectAddress[projectId].push(fromToken);
+        projectFeeAddress[projectId][fromToken] += fromAmount.sub(treasuryBounty_.add(treasuryBountyTwo));
+
+        if (treasuryFeeAddress[fromToken] == 0) treasuryAddress.push(fromToken);
+        treasuryFeeAddress[fromToken] += treasuryBounty_.add(treasuryBountyTwo);
+
+    }
+
 
     /*
     * @notice Project method to receive tokens
@@ -144,11 +186,16 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     */
     function uploadProjectParty(
         string calldata projectId,
-        uint256 project,
-        uint256 projectTreasury
+        address newProjectManager,
+        uint256 projectProportion,
+        uint256 projectTreasuryProportion
     ) external onlyRole(PROJECT_ADMINISTRATORS) {
-        projectFee[projectId] = project;
-        projectTreasuryFee[projectId] = projectTreasury;
+        projectFee[projectId] = projectProportion;
+        emit setProjectFeeRatio(block.timestamp, projectId, projectProportion);
+        projectTreasuryFee[projectId] = projectTreasuryProportion;
+        emit setProjectTreasuryFeeRatio(block.timestamp, projectId, projectTreasuryProportion);
+        _projectManager[projectId] = newProjectManager;
+        emit setNewProjectManager(block.timestamp, address(0), newProjectManager, projectId);
         _projectState[projectId] = true;
     }
 
@@ -161,19 +208,19 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     * @param projectProportion          Proportion of fees charged by the project party
     * @param projectTreasuryProportion  Proportion of the fee charged by the treasury to the project party
     */
-    function setProjectFee(
-        string calldata projectId,
-        address newProjectManager,
-        uint256 projectProportion,
-        uint256 projectTreasuryProportion
-    ) external onlyRole(PROJECT_ADMINISTRATORS) {
-        projectFee[projectId] = projectProportion;
-        emit setProjectFeeRatio(block.timestamp, projectId, projectProportion);
-        projectTreasuryFee[projectId] = projectTreasuryProportion;
-        emit setProjectTreasuryFeeRatio(block.timestamp, projectId, projectTreasuryProportion);
-        _projectManager[projectId] = newProjectManager;
-        emit setNewProjectManager(block.timestamp, address(0), newProjectManager, projectId);
-    }
+    // function setProjectFee(
+    //     string calldata projectId,
+    //     address newProjectManager,
+    //     uint256 projectProportion,
+    //     uint256 projectTreasuryProportion
+    // ) external onlyRole(PROJECT_ADMINISTRATORS) {
+    //     projectFee[projectId] = projectProportion;
+    //     emit setProjectFeeRatio(block.timestamp, projectId, projectProportion);
+    //     projectTreasuryFee[projectId] = projectTreasuryProportion;
+    //     emit setProjectTreasuryFeeRatio(block.timestamp, projectId, projectTreasuryProportion);
+    //     _projectManager[projectId] = newProjectManager;
+    //     emit setNewProjectManager(block.timestamp, address(0), newProjectManager, projectId);
+    // }
 
     /*
     * @notice Revised treasury fee

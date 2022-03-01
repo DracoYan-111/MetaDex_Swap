@@ -17,15 +17,18 @@ contract Storage {
 
     mapping(string => bool) public _projectState;
 
+    mapping(address => uint256) public _total;
+
     bool public globalState;
     address[] public treasuryAddress;
 
-    address  public _ETH_ADDRESS_;
+    address public _ETH_ADDRESS_;
 
 
     uint256 public _precision;
     uint256 public treasuryFee;
 
     address public swapContract;
+
 
 }

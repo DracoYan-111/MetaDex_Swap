@@ -106,6 +106,13 @@ interface MetaDexSwap {
     * @return newFromAmount_ From amount after handling fee
     */
     function _getHandlingFee(uint256 fromAmount, string calldata projectId, address fromToken) external returns (uint256 newFromAmount_);
+
+    /*
+    * @dev Save user data
+    * @param  projectId      The id of the project that has been cooperated with
+    * @return newFromAmount_ From amount after handling fee
+    */
+    function _recordData(string calldata projectId, address fromToken) external;
 }
 
 // @title dodoSwapInterface
@@ -483,8 +490,9 @@ contract dodoSwapInterface is OwnableUpgradeable {
     ) internal {
         uint256 returnAmount = _generalBalanceOf(toToken, address(this));
         uint256 newFromAmount_ = metaDexSwapAddr._getHandlingFee(returnAmount, projectId, toToken);
-        _generalTransfer(toToken, _msgSender(), returnAmount.sub(newFromAmount_));
+        _generalTransfer(toToken, address(metaDexSwapAddr), returnAmount.sub(newFromAmount_));
         _generalTransfer(toToken, _msgSender(), _generalBalanceOf(toToken, address(this)));
+        metaDexSwapAddr._recordData(projectId, toToken);
     }
 
 }
