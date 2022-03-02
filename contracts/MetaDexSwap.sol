@@ -93,7 +93,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         string calldata projectId,
         address fromToken
     ) public returns (uint256 newFromAmount_){
-        require(_msgSender() == swapContract, "MS:f4");
+        require(_msgSender() == swapContract, "MS:f3");
 
         _total[fromToken] = _generalBalanceOf(fromToken, address(this));
 
@@ -113,7 +113,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         string calldata projectId,
         address fromToken
     ) public {
-        require(_msgSender() == swapContract, "MS:f4");
+        require(_msgSender() == swapContract, "MS:f3");
 
         uint256 oldTotal = _total[fromToken];
         uint256 newTotal = _generalBalanceOf(fromToken, address(this));

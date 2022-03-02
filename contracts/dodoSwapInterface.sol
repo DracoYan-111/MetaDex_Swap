@@ -180,7 +180,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
         (bool success,) = addrList[1].call{value : addrList[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
         require(success, "API_SWAP_FAILED");
-        refund(projectId, addrList[3]);
+        refund(projectId, addrList[3], addrList[2]);
     }
 
     /**
@@ -221,7 +221,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         (bool success,) = addrList[1].call{value : addrList[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
         require(success, "API_SWAP_FAILED");
 
-        refund(projectId, addrList[3]);
+        refund(projectId, addrList[3], addrList[2]);
 
     }
 
@@ -254,7 +254,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         (bool success,) = toAddress.call{value : fromAmount}(data);
         require(success, "API_SWAP_FAILED");
 
-        refund(projectId, toToken);
+        refund(projectId, toToken, _ETH_ADDRESS_);
 
     }
 
@@ -292,7 +292,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         (bool success,) = addrList[1].call{value : addrList[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
         require(success, "API_SWAP_FAILED");
 
-        refund(projectId, addrList[3]);
+        refund(projectId, addrList[3], addrList[2]);
 
     }
 
@@ -332,7 +332,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         (bool success,) = addrList[1].call{value : addrList[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
         require(success, "API_SWAP_FAILED");
 
-        refund(projectId, addrList[3]);
+        refund(projectId, addrList[3], addrList[2]);
 
     }
 
@@ -370,7 +370,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         (bool success,) = addrList[1].call{value : addrList[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
         require(success, "API_SWAP_FAILED");
 
-        refund(projectId, addrList[3]);
+        refund(projectId, addrList[3], addrList[2]);
 
     }
 
@@ -407,7 +407,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
         (bool success,) = addrList[1].call{value : addrList[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
         require(success, "API_SWAP_FAILED");
 
-        refund(projectId, _ETH_ADDRESS_);
+        refund(projectId, _ETH_ADDRESS_, addrList[2]);
 
 
     }
@@ -486,13 +486,20 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
     function refund(
         string calldata projectId,
-        address toToken
+        address toToken,
+        address fromToken
     ) internal {
-        uint256 returnAmount = _generalBalanceOf(toToken, address(this));
-        uint256 newFromAmount_ = metaDexSwapAddr._getHandlingFee(returnAmount, projectId, toToken);
-        _generalTransfer(toToken, address(metaDexSwapAddr), returnAmount.sub(newFromAmount_));
-        _generalTransfer(toToken, _msgSender(), _generalBalanceOf(toToken, address(this)));
-        metaDexSwapAddr._recordData(projectId, toToken);
+        //require(_generalBalanceOf(fromToken, address(this)), "MS:f1");
+        uint256 fromTokenBalanceOf = _generalBalanceOf(fromToken, address(this));
+        if (fromTokenBalanceOf > 0) {
+            _generalTransfer(fromToken, _msgSender(), fromTokenBalanceOf);
+        } else {
+            uint256 returnAmount = _generalBalanceOf(toToken, address(this));
+            uint256 newFromAmount_ = metaDexSwapAddr._getHandlingFee(returnAmount, projectId, toToken);
+            _generalTransfer(toToken, address(metaDexSwapAddr), returnAmount.sub(newFromAmount_));
+            _generalTransfer(toToken, _msgSender(), _generalBalanceOf(toToken, address(this)));
+            metaDexSwapAddr._recordData(projectId, toToken);
+        }
     }
 
 }
