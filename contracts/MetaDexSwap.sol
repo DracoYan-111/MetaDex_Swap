@@ -153,8 +153,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         if (state) {
             for (uint256 i = 0; i < projectAddress[projectId].length; i++) {
                 address tokenAddress = projectAddress[projectId][i];
-                _generalTransfer(tokenAddress, to, projectFeeAddress[projectId][token]);
-                projectFeeAddress[projectId][token] = 0;
+                _generalTransfer(tokenAddress, to, projectFeeAddress[projectId][tokenAddress]);
+                projectFeeAddress[projectId][tokenAddress] = 0;
             }
         } else {
             _generalTransfer(token, to, projectFeeAddress[projectId][token]);
