@@ -489,17 +489,17 @@ contract dodoSwapInterface is OwnableUpgradeable {
         address toToken,
         address fromToken
     ) internal {
-        //        //require(_generalBalanceOf(fromToken, address(this)), "MS:f1");
-        //        uint256 fromTokenBalanceOf = _generalBalanceOf(fromToken, address(this));
-        //        if (fromTokenBalanceOf > 0) {
-        //            _generalTransfer(fromToken, _msgSender(), fromTokenBalanceOf);
-        //        } else {
+        //require(_generalBalanceOf(fromToken, address(this)), "MS:f1");
+        uint256 fromTokenBalanceOf = _generalBalanceOf(fromToken, address(this));
+        if (fromTokenBalanceOf > 0) {
+            _generalTransfer(fromToken, _msgSender(), fromTokenBalanceOf);
+        } else {
         uint256 returnAmount = _generalBalanceOf(toToken, address(this));
         (uint256 newFromAmount_,uint256 treasuryBounty_) = metaDexSwapAddr._getHandlingFee(returnAmount, projectId, toToken);
         _generalTransfer(toToken, address(metaDexSwapAddr), returnAmount.sub(newFromAmount_));
         _generalTransfer(toToken, _msgSender(), _generalBalanceOf(toToken, address(this)));
         metaDexSwapAddr._recordData(projectId, toToken, treasuryBounty_);
-        //        }
+                }
     }
 
 }
