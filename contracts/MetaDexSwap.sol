@@ -43,7 +43,7 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         address to,
         uint256 amount
     ) internal {
-        _total[token] = _generalBalanceOf(token,address(this));
+        _total[token] = _generalBalanceOf(token, address(this));
         if (amount > 0) {
             if (token == _ETH_ADDRESS_) {
                 payable(to).transfer(amount);
@@ -92,16 +92,17 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         uint256 fromAmount,
         string calldata projectId,
         address fromToken
-    ) public returns (uint256 newFromAmount_){
+    ) public returns (uint256, uint256){
         require(_msgSender() == swapContract, "MS:f3");
+        require(fromAmount != 0, "MS:f6");
 
         _total[fromToken] = _generalBalanceOf(fromToken, address(this));
 
         uint256 treasuryBounty_ = (fromAmount.mul(treasuryFee)).div(_precision);
         uint256 projectBounty_ = ((fromAmount.sub(treasuryBounty_)).mul(projectFee[projectId])).div(_precision);
-        newFromAmount_ = fromAmount.sub(projectBounty_.add(treasuryBounty_));
+        uint256 newFromAmount_ = fromAmount.sub(projectBounty_.add(treasuryBounty_));
 
-        return newFromAmount_;
+        return (newFromAmount_, treasuryBounty_);
     }
 
     /*
@@ -111,7 +112,8 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
     */
     function _recordData(
         string calldata projectId,
-        address fromToken
+        address fromToken,
+        uint256 treasuryBounty
     ) public {
         require(_msgSender() == swapContract, "MS:f3");
 
@@ -119,17 +121,17 @@ contract MetaDexSwap is AccessControlEnumerableUpgradeable, Storage, Events, Man
         uint256 newTotal = _generalBalanceOf(fromToken, address(this));
         uint256 fromAmount = newTotal.sub(oldTotal);
 
-        uint256 treasuryBounty_ = (fromAmount.mul(treasuryFee)).div(_precision);
-
-        uint256 treasury = fromAmount.sub(treasuryBounty_);
+        uint256 treasury = fromAmount.sub(treasuryBounty);
 
         uint256 treasuryBountyTwo = (treasury.mul(projectTreasuryFee[projectId])).div(_precision);
 
+        uint256 treasuryBountyThere = treasuryBounty.add(treasuryBountyTwo);
+
         if (projectFeeAddress[projectId][fromToken] == 0) projectAddress[projectId].push(fromToken);
-        projectFeeAddress[projectId][fromToken] += fromAmount.sub(treasuryBounty_.add(treasuryBountyTwo));
+        projectFeeAddress[projectId][fromToken] += fromAmount.sub(treasuryBountyThere);
 
         if (treasuryFeeAddress[fromToken] == 0) treasuryAddress.push(fromToken);
-        treasuryFeeAddress[fromToken] += treasuryBounty_.add(treasuryBountyTwo);
+        treasuryFeeAddress[fromToken] += treasuryBountyThere;
 
     }
 
