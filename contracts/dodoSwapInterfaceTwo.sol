@@ -3,12 +3,10 @@
 pragma solidity 0.8.9;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 // @title IDodoMultiSwap
 interface IDodoMultiSwap {
@@ -24,7 +22,7 @@ interface IDodoMultiSwap {
         uint256 directions,
         bytes[] calldata moreInfos,
         uint256 deadLine
-    ) external payable returns (uint256 returnAmount);
+    ) external returns (uint256 returnAmount);
 }
 
 // @title IDODOV2Proxy01
@@ -116,17 +114,15 @@ interface MetaDexSwap {
     function _recordData(string calldata projectId, address fromToken, uint256 treasuryBounty) external;
 }
 
-contract dodoSwapInterface is OwnableUpgradeable {
+// @title dodoSwapInterface
+contract dodoSwapInterface is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-
 
     address public _ETH_ADDRESS_;
     MetaDexSwap public metaDexSwapAddr;
 
-    function initialize(
-    ) public initializer {
-        __Ownable_init();
+    constructor()  {
         _ETH_ADDRESS_ = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     }
 
@@ -142,6 +138,7 @@ contract dodoSwapInterface is OwnableUpgradeable {
     function setMetaDexSwapAddr(address _metaDexSwapAddr) public onlyOwner {
         metaDexSwapAddr = MetaDexSwap(_metaDexSwapAddr);
     }
+
     /**
     * @notice Use IDodoMultiSwap interface mixSwap function
     * @dev  dodo api data return
@@ -164,7 +161,8 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
         uint256 fromAmount = _generalBalanceOf(addressArray[2], address(this));
 
-        IDodoMultiSwap(addressArray[1]).mixSwap{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(
+        bytes memory data = abi.encodeWithSelector(
+            IDodoMultiSwap.mixSwap.selector,
             addressArray[2],
             addressArray[3],
             fromAmount,
@@ -174,8 +172,10 @@ contract dodoSwapInterface is OwnableUpgradeable {
             assetTo,
             directions,
             moreInfos,
-            block.timestamp + 60 * 2);
+            block.timestamp + 60);
 
+        (bool success,) = addressArray[1].call{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
+        require(success, "API_SWAP_FAILED");
         refund(projectId, addressArray[3], addressArray[2]);
     }
 
@@ -201,7 +201,8 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
         uint256 fromAmount = _generalBalanceOf(addressArray[2], address(this));
 
-        IDODOV2Proxy01(addressArray[1]).mixSwap{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(
+        bytes memory data = abi.encodeWithSelector(
+            IDODOV2Proxy01.mixSwap.selector,
             addressArray[2],
             addressArray[3],
             fromAmount,
@@ -211,9 +212,13 @@ contract dodoSwapInterface is OwnableUpgradeable {
             assetTo,
             directions,
             isIncentive,
-            block.timestamp + 60 * 2);
+            block.timestamp + 60 );
+
+        (bool success,) = addressArray[1].call{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
+        require(success, "API_SWAP_FAILED");
 
         refund(projectId, addressArray[3], addressArray[2]);
+
     }
 
     /**
@@ -231,18 +236,22 @@ contract dodoSwapInterface is OwnableUpgradeable {
         bool isIncentive
     ) external payable {
 
+        uint256 fromAmount = _generalBalanceOf(_ETH_ADDRESS_, address(this));
 
-        uint256 fromAmount = msg.value;
-
-        IDODOV2Proxy01(toAddress).dodoSwapV2ETHToToken{value : fromAmount}(
+        bytes memory data = abi.encodeWithSelector(
+            IDODOV2Proxy01.dodoSwapV2ETHToToken.selector,
             toToken,
             1,
             dodoPairs,
             directions,
             isIncentive,
-            block.timestamp + 60 * 2);
+            block.timestamp + 60);
+
+        (bool success,) = toAddress.call{value : fromAmount}(data);
+        require(success, "API_SWAP_FAILED");
 
         refund(projectId, toToken, _ETH_ADDRESS_);
+
     }
 
     /**
@@ -259,13 +268,14 @@ contract dodoSwapInterface is OwnableUpgradeable {
         address[] memory dodoPairs,
         uint256 directions,
         bool isIncentive
-    ) external {
+    ) external payable {
 
         tokensTransferFrom(addressArray[2], fromTokenAmount, addressArray[0]);
 
         uint256 fromAmount = _generalBalanceOf(addressArray[2], address(this));
 
-        IDODOV2Proxy01(addressArray[1]).dodoSwapV2TokenToToken(
+        bytes memory data = abi.encodeWithSelector(
+            IDODOV2Proxy01.dodoSwapV2TokenToToken.selector,
             addressArray[2],
             addressArray[3],
             fromAmount,
@@ -273,9 +283,13 @@ contract dodoSwapInterface is OwnableUpgradeable {
             dodoPairs,
             directions,
             isIncentive,
-            block.timestamp + 60 * 2);
+            block.timestamp + 60);
+
+        (bool success,) = addressArray[1].call{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
+        require(success, "API_SWAP_FAILED");
 
         refund(projectId, addressArray[3], addressArray[2]);
+
     }
 
     /**
@@ -299,7 +313,8 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
         uint256 fromAmount = _generalBalanceOf(addressArray[2], address(this));
 
-        IDODOV2Proxy01(addressArray[1]).externalSwap{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(
+        bytes memory data = abi.encodeWithSelector(
+            IDODOV2Proxy01.externalSwap.selector,
             addressArray[2],
             addressArray[3],
             approveTarget,
@@ -308,9 +323,13 @@ contract dodoSwapInterface is OwnableUpgradeable {
             1,
             callDataConcat,
             isIncentive,
-            block.timestamp + 60 * 2);
+            block.timestamp + 60);
+
+        (bool success,) = addressArray[1].call{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
+        require(success, "API_SWAP_FAILED");
 
         refund(projectId, addressArray[3], addressArray[2]);
+
     }
 
     /**
@@ -333,7 +352,8 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
         uint256 fromAmount = _generalBalanceOf(addressArray[2], address(this));
 
-        IDODOV2Proxy01(addressArray[1]).dodoSwapV1{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(
+        bytes memory data = abi.encodeWithSelector(
+            IDODOV2Proxy01.dodoSwapV1.selector,
             addressArray[2],
             addressArray[3],
             fromAmount,
@@ -341,9 +361,13 @@ contract dodoSwapInterface is OwnableUpgradeable {
             dodoPairs,
             directions,
             isIncentive,
-            block.timestamp + 60 * 2);
+            block.timestamp + 60);
+
+        (bool success,) = addressArray[1].call{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
+        require(success, "API_SWAP_FAILED");
 
         refund(projectId, addressArray[3], addressArray[2]);
+
     }
 
     /**
@@ -366,16 +390,22 @@ contract dodoSwapInterface is OwnableUpgradeable {
 
         uint256 fromAmount = _generalBalanceOf(addressArray[2], address(this));
 
-        IDODOV2Proxy01(addressArray[1]).dodoSwapV2TokenToETH(
+        bytes memory data = abi.encodeWithSelector(
+            IDODOV2Proxy01.dodoSwapV2TokenToETH.selector,
             addressArray[2],
             fromAmount,
             1,
             dodoPairs,
             directions,
             isIncentive,
-            block.timestamp + 60 * 2);
+            block.timestamp + 60 * 10);
+
+        (bool success,) = addressArray[1].call{value : addressArray[2] == _ETH_ADDRESS_ ? fromAmount : 0}(data);
+        require(success, "API_SWAP_FAILED");
 
         refund(projectId, _ETH_ADDRESS_, addressArray[2]);
+
+
     }
 
     /**
